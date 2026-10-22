@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 500" role="img" aria-labelledby="title description">
+  <title id="title">Curious minds, creative builds</title>
+  <desc id="description">แบนเนอร์แนวนอนสีฟ้าและม่วงสำหรับเว็บไซต์ Portfolio</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#273b91"/>
+      <stop offset=".52" stop-color="#596de0"/>
+      <stop offset="1" stop-color="#91c9ea"/>
+    </linearGradient>
+    <linearGradient id="orb" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d7e7ff"/>
+      <stop offset="1" stop-color="#a6b8ff"/>
+    </linearGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.6" fill="#fff" opacity=".34"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="500" fill="url(#background)"/>
+  <circle cx="1240" cy="245" r="290" fill="#fff" opacity=".055"/>
+  <circle cx="1240" cy="245" r="218" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1.5"/>
+  <circle cx="1240" cy="245" r="155" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="1.5"/>
+  <path d="M0 410C210 335 331 483 560 414s359-117 558-22 324 35 482-43v151H0Z" fill="#d5f0ff" opacity=".12"/>
+  <path d="M0 450c219-79 339 49 548-13s362-92 555-19 355 27 497-19v101H0Z" fill="#172b77" opacity=".2"/>
+  <rect width="1600" height="500" fill="url(#dots)" opacity=".42"/>
+  <g opacity=".9">
+    <circle cx="1240" cy="245" r="112" fill="url(#orb)"/>
+    <circle cx="1240" cy="245" r="76" fill="#455bc8"/>
+    <path d="M1192 243c27-48 69-60 102-33-15 10-23 24-24 41-1 19-16 34-36 35-19 1-38-16-42-43Z" fill="#f0f5ff" opacity=".92"/>
+    <path d="M1190 227c7-37 43-59 72-53 18 4 31 18 35 38-23-14-48-10-65 4-13 11-26 16-42 11Z" fill="#263a84"/>
+  </g>
+  <g fill="none" stroke="#fff" stroke-opacity=".65" stroke-width="2">
+    <path d="M1080 114h30m-15-15v30"/>
+    <path d="M1422 325h38m-19-19v38"/>
+    <path d="M1344 94h22m-11-11v22"/>
+  </g>
+  <g fill="#fff" font-family="Arial, sans-serif">
+    <text x="150" y="170" font-size="19" font-weight="700" letter-spacing="6" opacity=".8">INFORMATION TECHNOLOGY PORTFOLIO</text>
+    <text x="145" y="262" font-size="66" font-weight="700" letter-spacing="-2">CURIOUS MINDS,</text>
+    <text x="145" y="342" font-size="66" font-weight="700" letter-spacing="-2">CREATIVE BUILDS.</text>
+    <text x="150" y="397" font-size="19" letter-spacing="2" opacity=".78">LEARN SOMETHING NEW · MAKE SOMETHING REAL</text>
+  </g>
+  <rect x="0" y="0" width="1600" height="500" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="2"/>
+</svg>
