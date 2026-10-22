@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="จัดการและอัปโหลดผลงาน Portfolio ของ Thawin Detwat">
+  <meta name="theme-color" content="#f5f8ff">
+  <title>จัดการผลงาน | Thawin Detwat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Thawin Detwat - หน้าแรก">
+      <span class="brand-mark" aria-hidden="true">T</span>
+      <span>Thawin Detwat<span class="brand-period">.</span></span>
+    </a>
+    <a class="header-link" href="work.html">ดูหน้าแสดงผลงาน <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main class="admin-page">
+    <section class="admin-intro">
+      <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> PORTFOLIO MANAGER</p>
+      <h1>จัดการผลงาน<span class="heading-period">.</span></h1>
+      <p>เพิ่มรูปและรายละเอียดโปรเจกต์เพื่อแสดงในหน้าผลงาน</p>
+      <div class="storage-notice" role="note">
+        โหมดทดลอง: ข้อมูลจะบันทึกไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น ไม่ได้อัปโหลดขึ้นเซิร์ฟเวอร์หรือแชร์กับผู้เข้าชมคนอื่น รหัสหน้านี้เป็นเพียงการซ่อนหน้า ไม่ใช่ระบบรักษาความปลอดภัยสำหรับเว็บไซต์สาธารณะ
+      </div>
+    </section>
+
+    <section id="admin-login-panel" class="admin-panel admin-login-panel" aria-labelledby="login-heading">
+      <h2 id="login-heading">ยืนยันรหัสผ่าน</h2>
+      <p>กรอกรหัสเพื่อเข้าสู่หน้าจัดการผลงาน</p>
+      <form id="admin-login-form">
+        <label class="admin-field">
+          <span>รหัสผ่าน</span>
+          <input id="admin-password" name="password" type="password" inputmode="numeric" autocomplete="current-password" placeholder="กรอกรหัสผ่าน" required>
+        </label>
+        <button class="button button-primary" type="submit">เข้าสู่ระบบ <span aria-hidden="true">→</span></button>
+        <p id="admin-login-status" class="admin-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <div id="admin-workspace" hidden>
+      <div class="admin-session-bar">
+        <span>เข้าสู่หน้าแอดมินแล้ว</span>
+        <button id="admin-logout" class="button button-danger" type="button">ออกจากระบบ</button>
+      </div>
+      <section class="admin-panel" aria-labelledby="upload-heading">
+        <h2 id="upload-heading">เพิ่มผลงานใหม่</h2>
+        <form id="project-form">
+          <label class="admin-field">
+            <span>ชื่อผลงาน</span>
+            <input name="title" type="text" maxlength="100" placeholder="เช่น เว็บไซต์ร้านกาแฟ" required>
+          </label>
+          <label class="admin-field">
+            <span>หมวดหมู่</span>
+            <input name="category" type="text" maxlength="40" placeholder="เช่น WEB DEVELOPMENT" required>
+          </label>
+          <label class="admin-field">
+            <span>รายละเอียด</span>
+            <textarea name="description" rows="4" maxlength="500" placeholder="เล่ารายละเอียดของผลงาน..." required></textarea>
+          </label>
+          <label class="admin-field">
+            <span>รูปภาพผลงาน</span>
+            <input id="project-image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required>
+            <small>รองรับ JPG, PNG, WEBP, GIF ขนาดไม่เกิน 10 MB</small>
+          </label>
+          <div id="image-preview" class="admin-image-preview" hidden>
+            <img alt="">
+          </div>
+          <button class="button button-primary" type="submit">บันทึกผลงาน <span aria-hidden="true">↗</span></button>
+          <p id="admin-status" class="admin-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="admin-panel admin-saved" aria-labelledby="saved-heading">
+        <div class="admin-list-heading">
+          <h2 id="saved-heading">ผลงานที่บันทึกไว้</h2>
+          <a class="text-link" href="work.html">ดูหน้าแสดงผลงาน <span aria-hidden="true">→</span></a>
+        </div>
+        <div id="admin-project-list" class="admin-project-list">
+          <p class="admin-empty">กำลังโหลดผลงาน...</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <a class="brand footer-brand" href="index.html"><span class="brand-mark" aria-hidden="true">T</span><span>Thawin Detwat<span class="brand-period">.</span></span></a>
+    <span>เครื่องมือจัดการ Portfolio ในเบราว์เซอร์</span>
+    <a class="back-top" href="work.html">กลับหน้าผลงาน ↑</a>
+  </footer>
+  <script src="admin-auth.js"></script>
+</body>
+</html>
