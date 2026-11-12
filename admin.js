@@ -1,4 +1,4 @@
-import { deleteProject, getProjectImages, getProjects, getSafeProjectLink, saveProject, saveProjectOrder } from './project-store.js';
+import { deleteProject, getLocalProjects, getProjectImages, getProjects, getSafeProjectLink, saveProject, saveProjectOrder } from './project-store.js';
 
 const form = document.querySelector('#project-form');
 const fileInput = document.querySelector('#project-image');
@@ -6,13 +6,12 @@ const pdfInput = document.querySelector('#project-pdf');
 const preview = document.querySelector('#image-preview');
 const projectList = document.querySelector('#admin-project-list');
 const statusMessage = document.querySelector('#admin-status');
-const publishButton = document.querySelector('#publish-projects');
-const publishDownloads = document.querySelector('#publish-downloads');
-const publishStatus = document.querySelector('#publish-status');
+const migrateButton = document.querySelector('#migrate-legacy-projects');
+const legacyNotice = document.querySelector('#legacy-projects-notice');
+const migrationStatus = document.querySelector('#migration-status');
 const submitButton = form.querySelector('button[type="submit"]');
 const previewUrls = [];
 const projectFileUrls = [];
-const publishedFileUrls = [];
 
 function setStatus(message, isError = false) {
   statusMessage.textContent = message;
@@ -34,9 +33,11 @@ function createAdminProject(project, index, projects) {
 
   const [coverImage] = getProjectImages(project);
   const image = document.createElement('img');
-  image.src = URL.createObjectURL(coverImage);
+  image.src = coverImage instanceof Blob ? URL.createObjectURL(coverImage) : coverImage;
   image.alt = '';
-  image.addEventListener('load', () => URL.revokeObjectURL(image.src), { once: true });
+  if (coverImage instanceof Blob) {
+    image.addEventListener('load', () => URL.revokeObjectURL(image.src), { once: true });
+  }
 
   const details = document.createElement('div');
   details.className = 'admin-project-details';
@@ -63,14 +64,15 @@ function createAdminProject(project, index, projects) {
   }
 
   let pdfLinkElement = null;
-  if (project.pdf instanceof Blob && project.pdf.type === 'application/pdf') {
+  if ((project.pdf instanceof Blob && project.pdf.type === 'application/pdf')
+    || getSafeProjectLink(project.pdf)) {
     pdfLinkElement = document.createElement('a');
     pdfLinkElement.className = 'text-link project-link';
-    pdfLinkElement.href = URL.createObjectURL(project.pdf);
+    pdfLinkElement.href = project.pdf instanceof Blob ? URL.createObjectURL(project.pdf) : project.pdf;
     pdfLinkElement.target = '_blank';
     pdfLinkElement.rel = 'noopener noreferrer';
     pdfLinkElement.textContent = 'เปิดไฟล์ PDF ↗';
-    projectFileUrls.push(pdfLinkElement.href);
+    if (project.pdf instanceof Blob) projectFileUrls.push(pdfLinkElement.href);
   }
 
   const removeButton = document.createElement('button');
@@ -145,81 +147,38 @@ async function renderProjects() {
   projects.forEach((project, index) => projectList.append(createAdminProject(project, index, projects)));
 }
 
-function getAssetExtension(blob) {
-  const extensions = {
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp',
-    'image/gif': 'gif',
-    'application/pdf': 'pdf',
-  };
-  const extension = extensions[blob.type];
-  if (!extension) throw new Error(`ไม่รองรับชนิดไฟล์ ${blob.type || 'ที่ไม่ทราบชนิด'}`);
-  return extension;
+async function updateLegacyProjectsNotice() {
+  const [localProjects, cloudProjects] = await Promise.all([getLocalProjects(), getProjects()]);
+  const cloudIds = new Set(cloudProjects.map((project) => project.id));
+  const projectsToMigrate = localProjects.filter((project) => !cloudIds.has(project.id));
+  migrateButton.hidden = projectsToMigrate.length === 0;
+  legacyNotice.hidden = projectsToMigrate.length === 0;
+  if (projectsToMigrate.length > 0) {
+    migrationStatus.textContent = `พบผลงานเดิม ${projectsToMigrate.length} รายการในเบราว์เซอร์เครื่องนี้`;
+  }
 }
 
-function createDownloadLink(filename, blob) {
-  const url = URL.createObjectURL(blob);
-  publishedFileUrls.push(url);
-  const link = document.createElement('a');
-  link.className = 'button button-primary';
-  link.href = url;
-  link.download = filename;
-  link.textContent = `ดาวน์โหลด ${filename}`;
-  publishDownloads.append(link);
-}
-
-publishButton.addEventListener('click', async () => {
-  publishButton.disabled = true;
-  publishStatus.textContent = 'กำลังเตรียมไฟล์สำหรับเผยแพร่...';
-  publishStatus.classList.remove('is-error');
-  publishDownloads.hidden = true;
-  publishDownloads.replaceChildren();
-  publishedFileUrls.forEach((url) => URL.revokeObjectURL(url));
-  publishedFileUrls.length = 0;
+migrateButton.addEventListener('click', async () => {
+  migrateButton.disabled = true;
+  migrationStatus.textContent = 'กำลังย้ายผลงานเดิมไปยัง Supabase...';
+  migrationStatus.classList.remove('is-error');
 
   try {
-    const projects = await getProjects();
-    const publishedProjects = projects.map((project, index) => {
-      const fileId = String(project.id).replace(/[^a-zA-Z0-9-]/g, '');
-      if (!fileId) throw new Error(`รหัสผลงาน “${project.title}” ใช้ตั้งชื่อไฟล์ไม่ได้`);
+    const [localProjects, cloudProjects] = await Promise.all([getLocalProjects(), getProjects()]);
+    const cloudIds = new Set(cloudProjects.map((project) => project.id));
+    const projectsToMigrate = localProjects.filter((project) => !cloudIds.has(project.id));
+    for (const [index, project] of projectsToMigrate.entries()) {
+      await saveProject({ ...project, order: cloudProjects.length + index });
+    }
 
-      const images = getProjectImages(project);
-      if (images.length === 0) throw new Error(`ผลงาน “${project.title}” ไม่มีรูปภาพ`);
-
-      const imageFiles = images.map((image, imageIndex) => {
-        const filename = `project-${fileId}-image-${imageIndex + 1}.${getAssetExtension(image)}`;
-        createDownloadLink(filename, image);
-        return filename;
-      });
-
-      let pdfFilename = null;
-      if (project.pdf instanceof Blob) {
-        pdfFilename = `project-${fileId}-document.${getAssetExtension(project.pdf)}`;
-        createDownloadLink(pdfFilename, project.pdf);
-      }
-
-      return {
-        id: project.id,
-        title: project.title,
-        category: project.category,
-        description: project.description,
-        link: project.link,
-        createdAt: project.createdAt,
-        order: index,
-        images: imageFiles,
-        pdf: pdfFilename,
-      };
-    });
-    const manifest = new Blob([JSON.stringify(publishedProjects, null, 2)], { type: 'application/json' });
-    createDownloadLink('published-projects.json', manifest);
-    publishDownloads.hidden = false;
-    publishStatus.textContent = `เตรียมไฟล์ ${publishedProjects.length} ผลงานเรียบร้อยแล้ว ดาวน์โหลดทุกลิงก์ด้านบน แล้วอัปโหลดทั้งหมดไว้โฟลเดอร์เดียวกับ work.html ใน GitHub`;
+    await renderProjects();
+    await updateLegacyProjectsNotice();
+    migrationStatus.textContent = `ย้ายผลงาน ${projectsToMigrate.length} รายการเรียบร้อยแล้ว`;
   } catch (error) {
-    publishStatus.textContent = `ส่งออกไฟล์ไม่สำเร็จ: ${error.message}`;
-    publishStatus.classList.add('is-error');
+    migrationStatus.textContent = `ย้ายผลงานไม่สำเร็จ: ${error.message}`;
+    migrationStatus.classList.add('is-error');
   } finally {
-    publishButton.disabled = false;
+    migrateButton.disabled = false;
   }
 });
 
@@ -293,7 +252,7 @@ form.addEventListener('submit', async (event) => {
   }
 
   submitButton.disabled = true;
-  setStatus('กำลังบันทึกผลงานในเบราว์เซอร์...');
+  setStatus('กำลังบันทึกผลงานลงฐานข้อมูล...');
 
   try {
     const existingProjects = await getProjects();
@@ -315,7 +274,7 @@ form.addEventListener('submit', async (event) => {
     preview.replaceChildren();
     releasePreview();
     await renderProjects();
-    setStatus('เพิ่มผลงานเรียบร้อยแล้ว');
+    setStatus('เพิ่มผลงานเรียบร้อยแล้ว ผู้ชมจะเห็นทันที');
   } catch (error) {
     setStatus(`บันทึกผลงานไม่สำเร็จ: ${error.message}`, true);
   } finally {
@@ -326,9 +285,13 @@ form.addEventListener('submit', async (event) => {
 window.addEventListener('pagehide', () => {
   releasePreview();
   projectFileUrls.forEach((url) => URL.revokeObjectURL(url));
-  publishedFileUrls.forEach((url) => URL.revokeObjectURL(url));
 });
 
 renderProjects().catch((error) => {
   setStatus(`โหลดรายการผลงานไม่สำเร็จ: ${error.message}`, true);
+});
+
+updateLegacyProjectsNotice().catch((error) => {
+  migrationStatus.textContent = `ตรวจสอบผลงานเดิมไม่สำเร็จ: ${error.message}`;
+  migrationStatus.classList.add('is-error');
 });

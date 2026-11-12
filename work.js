@@ -7,55 +7,6 @@ const imageViewer = document.querySelector('#image-viewer');
 const imageViewerImage = imageViewer.querySelector('.image-viewer-image');
 const projectFileUrls = [];
 
-function isValidDataUrl(value, mimeType) {
-  return typeof value === 'string'
-    && new RegExp(`^data:${mimeType};base64,[A-Za-z0-9+/]+={0,2}$`).test(value);
-}
-
-function isPublishedAsset(value, type) {
-  if (typeof value !== 'string' || value !== value.split(/[\\/]/).pop()) return false;
-  if (type === 'image') {
-    return /^project-[a-zA-Z0-9-]+-image-[1-3]\.(jpg|png|webp|gif)$/i.test(value);
-  }
-  return /^project-[a-zA-Z0-9-]+-document\.pdf$/i.test(value);
-}
-
-function validatePublishedProject(project, index) {
-  if (!project || typeof project !== 'object'
-    || typeof project.id !== 'string'
-    || typeof project.title !== 'string'
-    || typeof project.category !== 'string'
-    || typeof project.description !== 'string'
-    || !Array.isArray(project.images)
-    || project.images.length === 0
-    || !project.images.every((image) => isPublishedAsset(image, 'image')
-      || ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-        .some((mimeType) => isValidDataUrl(image, mimeType)))) {
-    throw new Error(`ข้อมูลผลงานลำดับที่ ${index + 1} ใน published-projects.json ไม่ถูกต้อง`);
-  }
-
-  if (project.pdf !== null && project.pdf !== undefined
-    && !isPublishedAsset(project.pdf, 'pdf')
-    && !isValidDataUrl(project.pdf, 'application/pdf')) {
-    throw new Error(`ไฟล์ PDF ของผลงานลำดับที่ ${index + 1} ใน published-projects.json ไม่ถูกต้อง`);
-  }
-
-  return project;
-}
-
-async function getPublishedProjects() {
-  const response = await fetch('./published-projects.json');
-  if (!response.ok) {
-    throw new Error(`อ่านไฟล์ published-projects.json ไม่สำเร็จ (HTTP ${response.status})`);
-  }
-
-  const projects = await response.json();
-  if (!Array.isArray(projects)) {
-    throw new Error('published-projects.json ต้องเป็นรายการผลงาน');
-  }
-  return projects.map(validatePublishedProject);
-}
-
 function createProjectCard(project, index) {
   const card = document.createElement('article');
   card.className = 'project-card uploaded-project-card';
@@ -63,17 +14,13 @@ function createProjectCard(project, index) {
   const preview = document.createElement('div');
   preview.className = 'project-preview uploaded-project-preview';
 
-  const images = Array.isArray(project.images) && project.images.length > 0
-    ? project.images
-    : getProjectImages(project);
+  const images = getProjectImages(project);
   const gallery = document.createElement('div');
   gallery.className = `uploaded-project-gallery${images.length === 1 ? ' single-image' : ''}`;
 
   images.forEach((imageFile, imageIndex) => {
     const image = document.createElement('img');
-    image.src = imageFile instanceof Blob
-      ? URL.createObjectURL(imageFile)
-      : isPublishedAsset(imageFile, 'image') ? `./${imageFile}` : imageFile;
+    image.src = imageFile instanceof Blob ? URL.createObjectURL(imageFile) : imageFile;
     image.alt = `${project.title} รูปที่ ${imageIndex + 1}`;
     if (imageFile instanceof Blob) projectFileUrls.push(image.src);
 
@@ -125,14 +72,13 @@ function createProjectCard(project, index) {
     actions.append(link);
   }
 
-  if ((project.pdf instanceof Blob && project.pdf.type === 'application/pdf')
-    || isPublishedAsset(project.pdf, 'pdf')
-    || isValidDataUrl(project.pdf, 'application/pdf')) {
+  const pdfUrl = project.pdf instanceof Blob ? null : getSafeProjectLink(project.pdf);
+  if ((project.pdf instanceof Blob && project.pdf.type === 'application/pdf') || pdfUrl) {
     const pdfLink = document.createElement('a');
     pdfLink.className = 'text-link project-link';
     pdfLink.href = project.pdf instanceof Blob
       ? URL.createObjectURL(project.pdf)
-      : isPublishedAsset(project.pdf, 'pdf') ? `./${project.pdf}` : project.pdf;
+      : pdfUrl;
     pdfLink.target = '_blank';
     pdfLink.rel = 'noopener noreferrer';
     pdfLink.textContent = 'เปิดไฟล์ PDF ↗';
@@ -175,16 +121,17 @@ imageViewer.addEventListener('click', (event) => {
 });
 
 async function renderProjects() {
-  const [publishedProjects, localProjects] = await Promise.all([getPublishedProjects(), getProjects()]);
-  const publishedIds = new Set(publishedProjects.map((project) => project.id));
-  const projects = [...publishedProjects, ...localProjects.filter((project) => !publishedIds.has(project.id))];
+  const projects = await getProjects();
   const staticProjects = document.querySelectorAll('main > .content-section > .project-grid > .project-card');
   staticProjects.forEach((card, index) => {
     const number = String(projects.length + index + 1).padStart(2, '0');
     card.querySelector('.project-number').textContent = number;
     card.querySelector('.project-meta span:last-child').textContent = number;
   });
-  if (projects.length === 0) return;
+  if (projects.length === 0) {
+    statusMessage.textContent = 'ยังไม่มีผลงานที่เผยแพร่';
+    return;
+  }
 
   section.hidden = false;
   statusMessage.textContent = '';
