@@ -1,5 +1,5 @@
-export const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
-export const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+export const SUPABASE_URL = 'https://ufqdccduxffrowzjdhtm.supabase.co';
+export const SUPABASE_ANON_KEY = 'sb_publishable_-v-oCKqJFvO-sXx8kKXesg_V9dECXyQ';
 
 export function isSupabaseConfigured() {
   return !SUPABASE_URL.includes('YOUR_PROJECT_ID')

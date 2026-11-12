@@ -25,7 +25,7 @@ stable
 security definer
 set search_path = ''
 as $$
-  select coalesce(lower(auth.jwt() ->> 'email') = lower('YOUR_ADMIN_EMAIL'), false);
+  select coalesce(lower(auth.jwt() ->> 'email') = lower('69319010023@tnk.ac.th'), false);
 $$;
 
 revoke all on function public.is_portfolio_admin() from public;
