@@ -6,9 +6,13 @@ const pdfInput = document.querySelector('#project-pdf');
 const preview = document.querySelector('#image-preview');
 const projectList = document.querySelector('#admin-project-list');
 const statusMessage = document.querySelector('#admin-status');
+const publishButton = document.querySelector('#publish-projects');
+const downloadProjectsLink = document.querySelector('#download-projects');
+const publishStatus = document.querySelector('#publish-status');
 const submitButton = form.querySelector('button[type="submit"]');
 const previewUrls = [];
 const projectFileUrls = [];
+let publishedFileUrl = null;
 
 function setStatus(message, isError = false) {
   statusMessage.textContent = message;
@@ -141,6 +145,56 @@ async function renderProjects() {
   projects.forEach((project, index) => projectList.append(createAdminProject(project, index, projects)));
 }
 
+function readBlobAsDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('แปลงไฟล์ผลงานสำหรับเผยแพร่ไม่สำเร็จ'));
+      }
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('อ่านไฟล์ผลงานไม่สำเร็จ'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+publishButton.addEventListener('click', async () => {
+  publishButton.disabled = true;
+  publishStatus.textContent = 'กำลังเตรียมไฟล์สำหรับเผยแพร่...';
+  publishStatus.classList.remove('is-error');
+  downloadProjectsLink.hidden = true;
+  downloadProjectsLink.removeAttribute('href');
+  if (publishedFileUrl) URL.revokeObjectURL(publishedFileUrl);
+  publishedFileUrl = null;
+
+  try {
+    const projects = await getProjects();
+    const publishedProjects = await Promise.all(projects.map(async (project, index) => ({
+      id: project.id,
+      title: project.title,
+      category: project.category,
+      description: project.description,
+      link: project.link,
+      createdAt: project.createdAt,
+      order: index,
+      images: await Promise.all(getProjectImages(project).map(readBlobAsDataUrl)),
+      pdf: project.pdf instanceof Blob ? await readBlobAsDataUrl(project.pdf) : null,
+    })));
+    const file = new Blob([JSON.stringify(publishedProjects, null, 2)], { type: 'application/json' });
+    publishedFileUrl = URL.createObjectURL(file);
+    downloadProjectsLink.href = publishedFileUrl;
+    downloadProjectsLink.hidden = false;
+    publishStatus.textContent = 'เตรียมไฟล์เรียบร้อยแล้ว กดปุ่มดาวน์โหลด จากนั้นอัปโหลดไฟล์ใน GitHub แล้ว commit/push';
+  } catch (error) {
+    publishStatus.textContent = `ส่งออกไฟล์ไม่สำเร็จ: ${error.message}`;
+    publishStatus.classList.add('is-error');
+  } finally {
+    publishButton.disabled = false;
+  }
+});
+
 fileInput.addEventListener('change', () => {
   releasePreview();
   const files = Array.from(fileInput.files);
@@ -244,6 +298,7 @@ form.addEventListener('submit', async (event) => {
 window.addEventListener('pagehide', () => {
   releasePreview();
   projectFileUrls.forEach((url) => URL.revokeObjectURL(url));
+  if (publishedFileUrl) URL.revokeObjectURL(publishedFileUrl);
 });
 
 renderProjects().catch((error) => {

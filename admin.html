@@ -26,7 +26,7 @@
       <h1>จัดการผลงาน<span class="heading-period">.</span></h1>
       <p>เพิ่มรูปและรายละเอียดโปรเจกต์เพื่อแสดงในหน้าผลงาน</p>
       <div class="storage-notice" role="note">
-        โหมดทดลอง: ข้อมูลจะบันทึกไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น ไม่ได้อัปโหลดขึ้นเซิร์ฟเวอร์หรือแชร์กับผู้เข้าชมคนอื่น รหัสหน้านี้เป็นเพียงการซ่อนหน้า ไม่ใช่ระบบรักษาความปลอดภัยสำหรับเว็บไซต์สาธารณะ
+        ผลงานที่บันทึกยังอยู่ในเบราว์เซอร์เครื่องนี้เท่านั้น ผู้ชมจะเห็นหลังจากกดส่งออกไฟล์ แล้วนำไฟล์ published-projects.json ไปแทนไฟล์เดิมใน GitHub และเผยแพร่เว็บใหม่ รหัสหน้านี้เป็นเพียงการซ่อนหน้า ไม่ใช่ระบบรักษาความปลอดภัยสำหรับเว็บไซต์สาธารณะ
       </div>
     </section>
 
@@ -92,6 +92,12 @@
           </div>
           <a class="text-link" href="work.html">ดูหน้าแสดงผลงาน <span aria-hidden="true">→</span></a>
         </div>
+        <div class="storage-notice" role="note">
+          เมื่อแก้ไขผลงานเสร็จ ให้ส่งออกไฟล์ด้านล่าง แล้วอัปโหลดทับไฟล์ published-projects.json ที่อยู่ข้าง work.html ใน GitHub จากนั้น commit/push เพื่อเผยแพร่ให้ทุกคนเห็น
+        </div>
+        <button id="publish-projects" class="button button-primary" type="button">เตรียมไฟล์สำหรับเผยแพร่ <span aria-hidden="true">↓</span></button>
+        <a id="download-projects" class="button button-primary" download="published-projects.json" hidden>ดาวน์โหลด published-projects.json</a>
+        <p id="publish-status" class="admin-status" role="status" aria-live="polite"></p>
         <div id="admin-project-list" class="admin-project-list">
           <p class="admin-empty">กำลังโหลดผลงาน...</p>
         </div>

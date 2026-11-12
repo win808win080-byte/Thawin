@@ -64,6 +64,7 @@ button { font: inherit; }
 .hero-description { max-width: 490px; margin: 22px 0 0; color: var(--muted); font-size: 17px; line-height: 1.9; }
 .hero-actions { display: flex; align-items: center; gap: 26px; margin-top: 32px; }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 23px; min-height: 50px; padding: 0 20px; border-radius: 8px; font-size: 15px; font-weight: 500; }
+.button[hidden] { display: none; }
 .button-primary { color: #fff; background: var(--blue); box-shadow: 0 10px 24px rgba(82, 105, 237, .23); transition: background .2s ease, transform .2s ease, box-shadow .2s ease; }
 .button-primary:hover { transform: translateY(-2px); background: var(--blue-dark); box-shadow: 0 13px 28px rgba(82, 105, 237, .3); }
 .button-primary span { font-size: 19px; }
@@ -108,11 +109,11 @@ button { font: inherit; }
 .preview-one { background: linear-gradient(135deg, #b3c2ff, #6e80e4); }
 .preview-two { background: linear-gradient(135deg, #d2e6fa, #8ebbd9); }
 .preview-three { background: linear-gradient(135deg, #c6d6f4, #abb7da); }
-.project-preview::before, .project-preview::after { position: absolute; content: ''; border: 1px solid rgba(255, 255, 255, .45); border-radius: 50%; }
+.project-preview::before, .project-preview::after { position: absolute; content: ''; border: 1px solid rgba(255, 255, 255, .45); border-radius: 50%; pointer-events: none; }
 .project-preview::before { width: 180px; height: 180px; right: -43px; top: -67px; }
 .project-preview::after { width: 125px; height: 125px; left: -40px; bottom: -65px; }
 .project-number, .preview-caption { position: absolute; color: rgba(255, 255, 255, .87); font: 700 9px var(--display); letter-spacing: 1.5px; }
-.project-number { top: 17px; left: 18px; }
+.project-number { z-index: 2; top: 17px; left: 18px; }
 .preview-caption { right: 18px; bottom: 17px; }
 .preview-icon { color: rgba(255, 255, 255, .9); font: 400 76px var(--display); text-shadow: 0 8px 24px rgba(50, 64, 133, .12); }
 .project-info { padding: 21px 21px 23px; }
@@ -184,7 +185,7 @@ footer { min-height: 88px; display: flex; align-items: center; justify-content: 
 .uploaded-projects { margin-bottom: 52px; }
 .uploaded-projects > h2 { margin: 0 0 22px; font-size: 27px; font-weight: 500; }
 .uploaded-projects[hidden] { display: none; }
-.uploaded-project-gallery { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 3px; }
+.uploaded-project-gallery { position: absolute; z-index: 1; inset: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 3px; }
 .uploaded-project-gallery .project-image-button { position: relative; min-width: 0; min-height: 0; padding: 0; overflow: hidden; border: 0; background: transparent; cursor: pointer; }
 .uploaded-project-gallery .project-image-button img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .uploaded-project-gallery .project-image-button:first-child:nth-last-child(2), .uploaded-project-gallery .project-image-button:first-child:nth-last-child(2) ~ .project-image-button { grid-row: span 2; }

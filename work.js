@@ -7,6 +7,44 @@ const imageViewer = document.querySelector('#image-viewer');
 const imageViewerImage = imageViewer.querySelector('.image-viewer-image');
 const projectFileUrls = [];
 
+function isValidDataUrl(value, mimeType) {
+  return typeof value === 'string'
+    && new RegExp(`^data:${mimeType};base64,[A-Za-z0-9+/]+={0,2}$`).test(value);
+}
+
+function validatePublishedProject(project, index) {
+  if (!project || typeof project !== 'object'
+    || typeof project.id !== 'string'
+    || typeof project.title !== 'string'
+    || typeof project.category !== 'string'
+    || typeof project.description !== 'string'
+    || !Array.isArray(project.images)
+    || project.images.length === 0
+    || !project.images.every((image) => ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+      .some((mimeType) => isValidDataUrl(image, mimeType)))) {
+    throw new Error(`ข้อมูลผลงานลำดับที่ ${index + 1} ใน published-projects.json ไม่ถูกต้อง`);
+  }
+
+  if (project.pdf !== null && project.pdf !== undefined && !isValidDataUrl(project.pdf, 'application/pdf')) {
+    throw new Error(`ไฟล์ PDF ของผลงานลำดับที่ ${index + 1} ใน published-projects.json ไม่ถูกต้อง`);
+  }
+
+  return project;
+}
+
+async function getPublishedProjects() {
+  const response = await fetch('./published-projects.json');
+  if (!response.ok) {
+    throw new Error(`อ่านไฟล์ published-projects.json ไม่สำเร็จ (HTTP ${response.status})`);
+  }
+
+  const projects = await response.json();
+  if (!Array.isArray(projects)) {
+    throw new Error('published-projects.json ต้องเป็นรายการผลงาน');
+  }
+  return projects.map(validatePublishedProject);
+}
+
 function createProjectCard(project, index) {
   const card = document.createElement('article');
   card.className = 'project-card uploaded-project-card';
@@ -14,14 +52,17 @@ function createProjectCard(project, index) {
   const preview = document.createElement('div');
   preview.className = 'project-preview uploaded-project-preview';
 
+  const images = Array.isArray(project.images) && project.images.length > 0
+    ? project.images
+    : getProjectImages(project);
   const gallery = document.createElement('div');
-  gallery.className = `uploaded-project-gallery${getProjectImages(project).length === 1 ? ' single-image' : ''}`;
+  gallery.className = `uploaded-project-gallery${images.length === 1 ? ' single-image' : ''}`;
 
-  getProjectImages(project).forEach((imageFile, imageIndex) => {
+  images.forEach((imageFile, imageIndex) => {
     const image = document.createElement('img');
-    image.src = URL.createObjectURL(imageFile);
+    image.src = imageFile instanceof Blob ? URL.createObjectURL(imageFile) : imageFile;
     image.alt = `${project.title} รูปที่ ${imageIndex + 1}`;
-    projectFileUrls.push(image.src);
+    if (imageFile instanceof Blob) projectFileUrls.push(image.src);
 
     const imageButton = document.createElement('button');
     imageButton.className = 'project-image-button';
@@ -71,14 +112,15 @@ function createProjectCard(project, index) {
     actions.append(link);
   }
 
-  if (project.pdf instanceof Blob && project.pdf.type === 'application/pdf') {
+  if ((project.pdf instanceof Blob && project.pdf.type === 'application/pdf')
+    || isValidDataUrl(project.pdf, 'application/pdf')) {
     const pdfLink = document.createElement('a');
     pdfLink.className = 'text-link project-link';
-    pdfLink.href = URL.createObjectURL(project.pdf);
+    pdfLink.href = project.pdf instanceof Blob ? URL.createObjectURL(project.pdf) : project.pdf;
     pdfLink.target = '_blank';
     pdfLink.rel = 'noopener noreferrer';
     pdfLink.textContent = 'เปิดไฟล์ PDF ↗';
-    projectFileUrls.push(pdfLink.href);
+    if (project.pdf instanceof Blob) projectFileUrls.push(pdfLink.href);
     actions.append(pdfLink);
   }
 
@@ -117,7 +159,9 @@ imageViewer.addEventListener('click', (event) => {
 });
 
 async function renderProjects() {
-  const projects = await getProjects();
+  const [publishedProjects, localProjects] = await Promise.all([getPublishedProjects(), getProjects()]);
+  const publishedIds = new Set(publishedProjects.map((project) => project.id));
+  const projects = [...publishedProjects, ...localProjects.filter((project) => !publishedIds.has(project.id))];
   const staticProjects = document.querySelectorAll('main > .content-section > .project-grid > .project-card');
   staticProjects.forEach((card, index) => {
     const number = String(projects.length + index + 1).padStart(2, '0');
