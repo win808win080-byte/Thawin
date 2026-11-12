@@ -93,10 +93,10 @@
           <a class="text-link" href="work.html">ดูหน้าแสดงผลงาน <span aria-hidden="true">→</span></a>
         </div>
         <div class="storage-notice" role="note">
-          เมื่อแก้ไขผลงานเสร็จ ให้ส่งออกไฟล์ด้านล่าง แล้วอัปโหลดทับไฟล์ published-projects.json ที่อยู่ข้าง work.html ใน GitHub จากนั้น commit/push เพื่อเผยแพร่ให้ทุกคนเห็น
+          กดเตรียมไฟล์ แล้วดาวน์โหลด JSON และไฟล์รูป/PDF แยกทีละรายการ จากนั้นอัปโหลดไฟล์ทั้งหมดไว้โฟลเดอร์เดียวกับ work.html ใน GitHub แล้ว commit/push
         </div>
         <button id="publish-projects" class="button button-primary" type="button">เตรียมไฟล์สำหรับเผยแพร่ <span aria-hidden="true">↓</span></button>
-        <a id="download-projects" class="button button-primary" download="published-projects.json" hidden>ดาวน์โหลด published-projects.json</a>
+        <div id="publish-downloads" class="publish-downloads" hidden></div>
         <p id="publish-status" class="admin-status" role="status" aria-live="polite"></p>
         <div id="admin-project-list" class="admin-project-list">
           <p class="admin-empty">กำลังโหลดผลงาน...</p>

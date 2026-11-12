@@ -7,12 +7,12 @@ const preview = document.querySelector('#image-preview');
 const projectList = document.querySelector('#admin-project-list');
 const statusMessage = document.querySelector('#admin-status');
 const publishButton = document.querySelector('#publish-projects');
-const downloadProjectsLink = document.querySelector('#download-projects');
+const publishDownloads = document.querySelector('#publish-downloads');
 const publishStatus = document.querySelector('#publish-status');
 const submitButton = form.querySelector('button[type="submit"]');
 const previewUrls = [];
 const projectFileUrls = [];
-let publishedFileUrl = null;
+const publishedFileUrls = [];
 
 function setStatus(message, isError = false) {
   statusMessage.textContent = message;
@@ -145,48 +145,76 @@ async function renderProjects() {
   projects.forEach((project, index) => projectList.append(createAdminProject(project, index, projects)));
 }
 
-function readBlobAsDataUrl(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-      } else {
-        reject(new Error('แปลงไฟล์ผลงานสำหรับเผยแพร่ไม่สำเร็จ'));
-      }
-    };
-    reader.onerror = () => reject(reader.error ?? new Error('อ่านไฟล์ผลงานไม่สำเร็จ'));
-    reader.readAsDataURL(blob);
-  });
+function getAssetExtension(blob) {
+  const extensions = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'application/pdf': 'pdf',
+  };
+  const extension = extensions[blob.type];
+  if (!extension) throw new Error(`ไม่รองรับชนิดไฟล์ ${blob.type || 'ที่ไม่ทราบชนิด'}`);
+  return extension;
+}
+
+function createDownloadLink(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  publishedFileUrls.push(url);
+  const link = document.createElement('a');
+  link.className = 'button button-primary';
+  link.href = url;
+  link.download = filename;
+  link.textContent = `ดาวน์โหลด ${filename}`;
+  publishDownloads.append(link);
 }
 
 publishButton.addEventListener('click', async () => {
   publishButton.disabled = true;
   publishStatus.textContent = 'กำลังเตรียมไฟล์สำหรับเผยแพร่...';
   publishStatus.classList.remove('is-error');
-  downloadProjectsLink.hidden = true;
-  downloadProjectsLink.removeAttribute('href');
-  if (publishedFileUrl) URL.revokeObjectURL(publishedFileUrl);
-  publishedFileUrl = null;
+  publishDownloads.hidden = true;
+  publishDownloads.replaceChildren();
+  publishedFileUrls.forEach((url) => URL.revokeObjectURL(url));
+  publishedFileUrls.length = 0;
 
   try {
     const projects = await getProjects();
-    const publishedProjects = await Promise.all(projects.map(async (project, index) => ({
-      id: project.id,
-      title: project.title,
-      category: project.category,
-      description: project.description,
-      link: project.link,
-      createdAt: project.createdAt,
-      order: index,
-      images: await Promise.all(getProjectImages(project).map(readBlobAsDataUrl)),
-      pdf: project.pdf instanceof Blob ? await readBlobAsDataUrl(project.pdf) : null,
-    })));
-    const file = new Blob([JSON.stringify(publishedProjects, null, 2)], { type: 'application/json' });
-    publishedFileUrl = URL.createObjectURL(file);
-    downloadProjectsLink.href = publishedFileUrl;
-    downloadProjectsLink.hidden = false;
-    publishStatus.textContent = 'เตรียมไฟล์เรียบร้อยแล้ว กดปุ่มดาวน์โหลด จากนั้นอัปโหลดไฟล์ใน GitHub แล้ว commit/push';
+    const publishedProjects = projects.map((project, index) => {
+      const fileId = String(project.id).replace(/[^a-zA-Z0-9-]/g, '');
+      if (!fileId) throw new Error(`รหัสผลงาน “${project.title}” ใช้ตั้งชื่อไฟล์ไม่ได้`);
+
+      const images = getProjectImages(project);
+      if (images.length === 0) throw new Error(`ผลงาน “${project.title}” ไม่มีรูปภาพ`);
+
+      const imageFiles = images.map((image, imageIndex) => {
+        const filename = `project-${fileId}-image-${imageIndex + 1}.${getAssetExtension(image)}`;
+        createDownloadLink(filename, image);
+        return filename;
+      });
+
+      let pdfFilename = null;
+      if (project.pdf instanceof Blob) {
+        pdfFilename = `project-${fileId}-document.${getAssetExtension(project.pdf)}`;
+        createDownloadLink(pdfFilename, project.pdf);
+      }
+
+      return {
+        id: project.id,
+        title: project.title,
+        category: project.category,
+        description: project.description,
+        link: project.link,
+        createdAt: project.createdAt,
+        order: index,
+        images: imageFiles,
+        pdf: pdfFilename,
+      };
+    });
+    const manifest = new Blob([JSON.stringify(publishedProjects, null, 2)], { type: 'application/json' });
+    createDownloadLink('published-projects.json', manifest);
+    publishDownloads.hidden = false;
+    publishStatus.textContent = `เตรียมไฟล์ ${publishedProjects.length} ผลงานเรียบร้อยแล้ว ดาวน์โหลดทุกลิงก์ด้านบน แล้วอัปโหลดทั้งหมดไว้โฟลเดอร์เดียวกับ work.html ใน GitHub`;
   } catch (error) {
     publishStatus.textContent = `ส่งออกไฟล์ไม่สำเร็จ: ${error.message}`;
     publishStatus.classList.add('is-error');
@@ -298,7 +326,7 @@ form.addEventListener('submit', async (event) => {
 window.addEventListener('pagehide', () => {
   releasePreview();
   projectFileUrls.forEach((url) => URL.revokeObjectURL(url));
-  if (publishedFileUrl) URL.revokeObjectURL(publishedFileUrl);
+  publishedFileUrls.forEach((url) => URL.revokeObjectURL(url));
 });
 
 renderProjects().catch((error) => {

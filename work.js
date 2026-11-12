@@ -12,6 +12,14 @@ function isValidDataUrl(value, mimeType) {
     && new RegExp(`^data:${mimeType};base64,[A-Za-z0-9+/]+={0,2}$`).test(value);
 }
 
+function isPublishedAsset(value, type) {
+  if (typeof value !== 'string' || value !== value.split(/[\\/]/).pop()) return false;
+  if (type === 'image') {
+    return /^project-[a-zA-Z0-9-]+-image-[1-3]\.(jpg|png|webp|gif)$/i.test(value);
+  }
+  return /^project-[a-zA-Z0-9-]+-document\.pdf$/i.test(value);
+}
+
 function validatePublishedProject(project, index) {
   if (!project || typeof project !== 'object'
     || typeof project.id !== 'string'
@@ -20,12 +28,15 @@ function validatePublishedProject(project, index) {
     || typeof project.description !== 'string'
     || !Array.isArray(project.images)
     || project.images.length === 0
-    || !project.images.every((image) => ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-      .some((mimeType) => isValidDataUrl(image, mimeType)))) {
+    || !project.images.every((image) => isPublishedAsset(image, 'image')
+      || ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+        .some((mimeType) => isValidDataUrl(image, mimeType)))) {
     throw new Error(`ข้อมูลผลงานลำดับที่ ${index + 1} ใน published-projects.json ไม่ถูกต้อง`);
   }
 
-  if (project.pdf !== null && project.pdf !== undefined && !isValidDataUrl(project.pdf, 'application/pdf')) {
+  if (project.pdf !== null && project.pdf !== undefined
+    && !isPublishedAsset(project.pdf, 'pdf')
+    && !isValidDataUrl(project.pdf, 'application/pdf')) {
     throw new Error(`ไฟล์ PDF ของผลงานลำดับที่ ${index + 1} ใน published-projects.json ไม่ถูกต้อง`);
   }
 
@@ -60,7 +71,9 @@ function createProjectCard(project, index) {
 
   images.forEach((imageFile, imageIndex) => {
     const image = document.createElement('img');
-    image.src = imageFile instanceof Blob ? URL.createObjectURL(imageFile) : imageFile;
+    image.src = imageFile instanceof Blob
+      ? URL.createObjectURL(imageFile)
+      : isPublishedAsset(imageFile, 'image') ? `./${imageFile}` : imageFile;
     image.alt = `${project.title} รูปที่ ${imageIndex + 1}`;
     if (imageFile instanceof Blob) projectFileUrls.push(image.src);
 
@@ -113,10 +126,13 @@ function createProjectCard(project, index) {
   }
 
   if ((project.pdf instanceof Blob && project.pdf.type === 'application/pdf')
+    || isPublishedAsset(project.pdf, 'pdf')
     || isValidDataUrl(project.pdf, 'application/pdf')) {
     const pdfLink = document.createElement('a');
     pdfLink.className = 'text-link project-link';
-    pdfLink.href = project.pdf instanceof Blob ? URL.createObjectURL(project.pdf) : project.pdf;
+    pdfLink.href = project.pdf instanceof Blob
+      ? URL.createObjectURL(project.pdf)
+      : isPublishedAsset(project.pdf, 'pdf') ? `./${project.pdf}` : project.pdf;
     pdfLink.target = '_blank';
     pdfLink.rel = 'noopener noreferrer';
     pdfLink.textContent = 'เปิดไฟล์ PDF ↗';
