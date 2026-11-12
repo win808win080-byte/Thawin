@@ -2,6 +2,17 @@ const DATABASE_NAME = 'thawin-portfolio';
 const DATABASE_VERSION = 1;
 const STORE_NAME = 'projects';
 
+export function getSafeProjectLink(value) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);

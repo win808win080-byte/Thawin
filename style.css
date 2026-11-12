@@ -120,6 +120,8 @@ button { font: inherit; }
 .project-meta span:last-child { color: #a4adbd; }
 .project-info h2, .project-info h3 { margin: 12px 0 6px; font-size: 21px; font-weight: 500; }
 .project-info p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.project-actions { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; }
+.project-link { display: inline-block; color: var(--blue); }
 
 .page-intro { padding: 82px clamp(24px, 10vw, 155px) 25px; background: var(--paper); }
 .page-intro .eyebrow { margin-bottom: 13px; }

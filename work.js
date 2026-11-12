@@ -1,9 +1,9 @@
-import { getProjects } from './project-store.js';
+import { getProjects, getSafeProjectLink } from './project-store.js';
 
 const section = document.querySelector('#uploaded-projects');
 const projectGrid = document.querySelector('#uploaded-project-grid');
 const statusMessage = document.querySelector('#uploaded-project-status');
-const imageUrls = [];
+const projectFileUrls = [];
 
 function createProjectCard(project, index) {
   const card = document.createElement('article');
@@ -15,7 +15,7 @@ function createProjectCard(project, index) {
   const image = document.createElement('img');
   image.src = URL.createObjectURL(project.image);
   image.alt = project.title;
-  imageUrls.push(image.src);
+  projectFileUrls.push(image.src);
 
   const number = document.createElement('span');
   number.className = 'project-number';
@@ -42,7 +42,34 @@ function createProjectCard(project, index) {
   description.textContent = project.description;
 
   meta.append(category, metaNumber);
+
+  const actions = document.createElement('div');
+  actions.className = 'project-actions';
+
+  const projectLink = getSafeProjectLink(project.link);
+  if (projectLink) {
+    const link = document.createElement('a');
+    link.className = 'text-link project-link';
+    link.href = projectLink;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'ดูผลงาน ↗';
+    actions.append(link);
+  }
+
+  if (project.pdf instanceof Blob && project.pdf.type === 'application/pdf') {
+    const pdfLink = document.createElement('a');
+    pdfLink.className = 'text-link project-link';
+    pdfLink.href = URL.createObjectURL(project.pdf);
+    pdfLink.target = '_blank';
+    pdfLink.rel = 'noopener noreferrer';
+    pdfLink.textContent = 'เปิดไฟล์ PDF ↗';
+    projectFileUrls.push(pdfLink.href);
+    actions.append(pdfLink);
+  }
+
   info.append(meta, title, description);
+  if (actions.childElementCount > 0) info.append(actions);
   card.append(preview, info);
   return card;
 }
@@ -59,7 +86,7 @@ async function renderProjects() {
 }
 
 window.addEventListener('pagehide', () => {
-  imageUrls.forEach((url) => URL.revokeObjectURL(url));
+  projectFileUrls.forEach((url) => URL.revokeObjectURL(url));
 });
 
 renderProjects().catch((error) => {

@@ -1,13 +1,15 @@
-import { deleteProject, getProjects, saveProject } from './project-store.js';
+import { deleteProject, getProjects, getSafeProjectLink, saveProject } from './project-store.js';
 
 const form = document.querySelector('#project-form');
 const fileInput = document.querySelector('#project-image');
+const pdfInput = document.querySelector('#project-pdf');
 const preview = document.querySelector('#image-preview');
 const previewImage = preview.querySelector('img');
 const projectList = document.querySelector('#admin-project-list');
 const statusMessage = document.querySelector('#admin-status');
 const submitButton = form.querySelector('button[type="submit"]');
 let previewUrl = null;
+const projectFileUrls = [];
 
 function setStatus(message, isError = false) {
   statusMessage.textContent = message;
@@ -42,6 +44,30 @@ function createAdminProject(project) {
   const description = document.createElement('p');
   description.textContent = project.description;
 
+  const projectLink = getSafeProjectLink(project.link);
+  if (projectLink) {
+    const link = document.createElement('a');
+    link.className = 'text-link project-link';
+    link.href = projectLink;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'เปิดลิงก์ผลงาน ↗';
+    details.append(category, title, description, link);
+  } else {
+    details.append(category, title, description);
+  }
+
+  if (project.pdf instanceof Blob && project.pdf.type === 'application/pdf') {
+    const pdfLink = document.createElement('a');
+    pdfLink.className = 'text-link project-link';
+    pdfLink.href = URL.createObjectURL(project.pdf);
+    pdfLink.target = '_blank';
+    pdfLink.rel = 'noopener noreferrer';
+    pdfLink.textContent = 'เปิดไฟล์ PDF ↗';
+    projectFileUrls.push(pdfLink.href);
+    details.append(pdfLink);
+  }
+
   const removeButton = document.createElement('button');
   removeButton.className = 'button button-danger';
   removeButton.type = 'button';
@@ -60,7 +86,7 @@ function createAdminProject(project) {
     }
   });
 
-  details.append(category, title, description, removeButton);
+  details.append(removeButton);
   card.append(image, details);
   return card;
 }
@@ -94,12 +120,21 @@ fileInput.addEventListener('change', () => {
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const [image] = fileInput.files;
+  const [pdf] = pdfInput.files;
   const title = form.elements.title.value.trim();
   const category = form.elements.category.value.trim();
   const description = form.elements.description.value.trim();
+  const linkValue = form.elements.link.value.trim();
+  const link = getSafeProjectLink(linkValue);
 
   if (!title || !category || !description) {
     setStatus('กรุณากรอกชื่อ หมวดหมู่ และรายละเอียดให้ครบ', true);
+    return;
+  }
+
+  if (linkValue && !link) {
+    setStatus('ลิงก์ผลงานต้องเป็น URL ที่ขึ้นต้นด้วย http:// หรือ https://', true);
+    form.elements.link.focus();
     return;
   }
 
@@ -121,6 +156,18 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
+  if (pdf && ((pdf.type && pdf.type !== 'application/pdf') || !pdf.name.toLowerCase().endsWith('.pdf'))) {
+    setStatus('รองรับเฉพาะไฟล์ PDF', true);
+    pdfInput.focus();
+    return;
+  }
+
+  if (pdf && pdf.size > 10 * 1024 * 1024) {
+    setStatus('ไฟล์ PDF ต้องมีขนาดไม่เกิน 10 MB', true);
+    pdfInput.focus();
+    return;
+  }
+
   submitButton.disabled = true;
   setStatus('กำลังบันทึกผลงานในเบราว์เซอร์...');
 
@@ -130,7 +177,9 @@ form.addEventListener('submit', async (event) => {
       title,
       category,
       description,
+      link: link ?? '',
       image,
+      pdf: pdf ? new Blob([pdf], { type: 'application/pdf' }) : null,
       createdAt: new Date().toISOString(),
     });
     form.reset();
@@ -146,7 +195,10 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
-window.addEventListener('pagehide', releasePreview);
+window.addEventListener('pagehide', () => {
+  releasePreview();
+  projectFileUrls.forEach((url) => URL.revokeObjectURL(url));
+});
 
 renderProjects().catch((error) => {
   setStatus(`โหลดรายการผลงานไม่สำเร็จ: ${error.message}`, true);
