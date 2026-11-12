@@ -13,6 +13,13 @@ export function getSafeProjectLink(value) {
   }
 }
 
+export function getProjectImages(project) {
+  if (Array.isArray(project.images) && project.images.length > 0) {
+    return project.images.filter((image) => image instanceof Blob);
+  }
+  return project.image instanceof Blob ? [project.image] : [];
+}
+
 function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);

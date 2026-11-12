@@ -1,4 +1,4 @@
-import { getProjects, getSafeProjectLink } from './project-store.js';
+import { getProjectImages, getProjects, getSafeProjectLink } from './project-store.js';
 
 const section = document.querySelector('#uploaded-projects');
 const projectGrid = document.querySelector('#uploaded-project-grid');
@@ -14,22 +14,28 @@ function createProjectCard(project, index) {
   const preview = document.createElement('div');
   preview.className = 'project-preview uploaded-project-preview';
 
-  const image = document.createElement('img');
-  image.src = URL.createObjectURL(project.image);
-  image.alt = project.title;
-  projectFileUrls.push(image.src);
+  const gallery = document.createElement('div');
+  gallery.className = `uploaded-project-gallery${getProjectImages(project).length === 1 ? ' single-image' : ''}`;
 
-  const imageButton = document.createElement('button');
-  imageButton.className = 'project-image-button';
-  imageButton.type = 'button';
-  imageButton.setAttribute('aria-label', `ขยายรูปภาพ: ${project.title}`);
-  imageButton.append(image);
+  getProjectImages(project).forEach((imageFile, imageIndex) => {
+    const image = document.createElement('img');
+    image.src = URL.createObjectURL(imageFile);
+    image.alt = `${project.title} รูปที่ ${imageIndex + 1}`;
+    projectFileUrls.push(image.src);
+
+    const imageButton = document.createElement('button');
+    imageButton.className = 'project-image-button';
+    imageButton.type = 'button';
+    imageButton.setAttribute('aria-label', `ดูรูปที่ ${imageIndex + 1}: ${project.title}`);
+    imageButton.append(image);
+    gallery.append(imageButton);
+  });
 
   const number = document.createElement('span');
   number.className = 'project-number';
   number.textContent = String(index + 1).padStart(2, '0');
 
-  preview.append(imageButton, number);
+  preview.append(gallery, number);
 
   const info = document.createElement('div');
   info.className = 'project-info';
@@ -89,26 +95,25 @@ projectGrid.addEventListener('click', (event) => {
   const image = imageButton.querySelector('img');
   imageViewerImage.src = image.src;
   imageViewerImage.alt = image.alt;
-  imageViewer.showModal();
+  imageViewer.hidden = false;
+  document.body.classList.add('image-viewer-open');
+  imageViewer.querySelector('.image-viewer-close').focus();
 });
 
 imageViewer.querySelector('.image-viewer-close').addEventListener('click', () => {
-  imageViewer.close();
+  imageViewer.hidden = true;
+  document.body.classList.remove('image-viewer-open');
+  imageViewerImage.removeAttribute('src');
+  imageViewerImage.alt = '';
 });
 
 document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape' || !imageViewer.open) return;
-  event.preventDefault();
-  imageViewer.close();
+  if (event.key !== 'Escape' || imageViewer.hidden) return;
+  imageViewer.querySelector('.image-viewer-close').click();
 });
 
 imageViewer.addEventListener('click', (event) => {
-  if (event.target === imageViewer) imageViewer.close();
-});
-
-imageViewer.addEventListener('close', () => {
-  imageViewerImage.removeAttribute('src');
-  imageViewerImage.alt = '';
+  if (event.target === imageViewer) imageViewer.querySelector('.image-viewer-close').click();
 });
 
 async function renderProjects() {

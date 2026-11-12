@@ -1,14 +1,13 @@
-import { deleteProject, getProjects, getSafeProjectLink, saveProject, saveProjectOrder } from './project-store.js';
+import { deleteProject, getProjectImages, getProjects, getSafeProjectLink, saveProject, saveProjectOrder } from './project-store.js';
 
 const form = document.querySelector('#project-form');
 const fileInput = document.querySelector('#project-image');
 const pdfInput = document.querySelector('#project-pdf');
 const preview = document.querySelector('#image-preview');
-const previewImage = preview.querySelector('img');
 const projectList = document.querySelector('#admin-project-list');
 const statusMessage = document.querySelector('#admin-status');
 const submitButton = form.querySelector('button[type="submit"]');
-let previewUrl = null;
+const previewUrls = [];
 const projectFileUrls = [];
 
 function setStatus(message, isError = false) {
@@ -17,9 +16,8 @@ function setStatus(message, isError = false) {
 }
 
 function releasePreview() {
-  if (!previewUrl) return;
-  URL.revokeObjectURL(previewUrl);
-  previewUrl = null;
+  previewUrls.forEach((url) => URL.revokeObjectURL(url));
+  previewUrls.length = 0;
 }
 
 function createAdminProject(project, index, projects) {
@@ -30,8 +28,9 @@ function createAdminProject(project, index, projects) {
   number.className = 'admin-project-number';
   number.textContent = `งานที่ ${String(index + 1).padStart(2, '0')}`;
 
+  const [coverImage] = getProjectImages(project);
   const image = document.createElement('img');
-  image.src = URL.createObjectURL(project.image);
+  image.src = URL.createObjectURL(coverImage);
   image.alt = '';
   image.addEventListener('load', () => URL.revokeObjectURL(image.src), { once: true });
 
@@ -144,18 +143,23 @@ async function renderProjects() {
 
 fileInput.addEventListener('change', () => {
   releasePreview();
-  const [file] = fileInput.files;
-  preview.hidden = !file;
-  if (!file) return;
-
-  previewUrl = URL.createObjectURL(file);
-  previewImage.src = previewUrl;
-  previewImage.alt = `ตัวอย่างรูปภาพ: ${file.name}`;
+  const files = Array.from(fileInput.files);
+  preview.replaceChildren();
+  preview.hidden = files.length === 0;
+  files.forEach((file) => {
+    const image = document.createElement('img');
+    const url = URL.createObjectURL(file);
+    previewUrls.push(url);
+    image.src = url;
+    image.alt = `ตัวอย่างรูปภาพ: ${file.name}`;
+    preview.append(image);
+  });
 });
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const [image] = fileInput.files;
+  const images = Array.from(fileInput.files);
+  const [image] = images;
   const [pdf] = pdfInput.files;
   const title = form.elements.title.value.trim();
   const category = form.elements.category.value.trim();
@@ -174,20 +178,22 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
-  if (!image) {
-    setStatus('กรุณาเลือกรูปภาพผลงาน', true);
+  if (images.length === 0 || images.length > 3) {
+    setStatus('กรุณาเลือกรูปภาพผลงาน 1–3 รูป', true);
     fileInput.focus();
     return;
   }
 
-  if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(image.type)) {
-    setStatus('รองรับเฉพาะไฟล์ JPG, PNG, WEBP หรือ GIF', true);
+  const invalidImage = images.find((file) => !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type));
+  if (invalidImage) {
+    setStatus(`ไฟล์ “${invalidImage.name}” ไม่ใช่รูป JPG, PNG, WEBP หรือ GIF`, true);
     fileInput.focus();
     return;
   }
 
-  if (image.size > 10 * 1024 * 1024) {
-    setStatus('รูปภาพต้องมีขนาดไม่เกิน 10 MB', true);
+  const oversizedImage = images.find((file) => file.size > 10 * 1024 * 1024);
+  if (oversizedImage) {
+    setStatus(`รูป “${oversizedImage.name}” มีขนาดเกิน 10 MB`, true);
     fileInput.focus();
     return;
   }
@@ -217,13 +223,14 @@ form.addEventListener('submit', async (event) => {
       description,
       link: link ?? '',
       image,
+      images,
       pdf: pdf ? new Blob([pdf], { type: 'application/pdf' }) : null,
       createdAt: new Date().toISOString(),
       order: existingProjects.length,
     });
     form.reset();
     preview.hidden = true;
-    previewImage.removeAttribute('src');
+    preview.replaceChildren();
     releasePreview();
     await renderProjects();
     setStatus('เพิ่มผลงานเรียบร้อยแล้ว');
