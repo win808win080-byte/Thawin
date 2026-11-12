@@ -45,11 +45,37 @@ function runTransaction(mode, operation) {
 
 export function getProjects() {
   return runTransaction('readonly', (store) => store.getAll())
-    .then((projects) => projects.sort((first, second) => second.createdAt.localeCompare(first.createdAt)));
+    .then((projects) => projects.sort((first, second) => {
+      if (Number.isInteger(first.order) && Number.isInteger(second.order)) {
+        return first.order - second.order;
+      }
+      return second.createdAt.localeCompare(first.createdAt);
+    }));
 }
 
 export function saveProject(project) {
   return runTransaction('readwrite', (store) => store.put(project));
+}
+
+export function saveProjectOrder(projects) {
+  return openDatabase().then((database) => new Promise((resolve, reject) => {
+    const transaction = database.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+
+    projects.forEach((project, index) => {
+      store.put({ ...project, order: index });
+    });
+
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onabort = () => {
+      database.close();
+      reject(transaction.error ?? new Error('บันทึกลำดับผลงานไม่สำเร็จ'));
+    };
+    transaction.onerror = () => database.close();
+  }));
 }
 
 export function deleteProject(id) {

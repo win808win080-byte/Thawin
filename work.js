@@ -3,6 +3,8 @@ import { getProjects, getSafeProjectLink } from './project-store.js';
 const section = document.querySelector('#uploaded-projects');
 const projectGrid = document.querySelector('#uploaded-project-grid');
 const statusMessage = document.querySelector('#uploaded-project-status');
+const imageViewer = document.querySelector('#image-viewer');
+const imageViewerImage = imageViewer.querySelector('.image-viewer-image');
 const projectFileUrls = [];
 
 function createProjectCard(project, index) {
@@ -17,11 +19,17 @@ function createProjectCard(project, index) {
   image.alt = project.title;
   projectFileUrls.push(image.src);
 
+  const imageButton = document.createElement('button');
+  imageButton.className = 'project-image-button';
+  imageButton.type = 'button';
+  imageButton.setAttribute('aria-label', `ขยายรูปภาพ: ${project.title}`);
+  imageButton.append(image);
+
   const number = document.createElement('span');
   number.className = 'project-number';
   number.textContent = String(index + 1).padStart(2, '0');
 
-  preview.append(image, number);
+  preview.append(imageButton, number);
 
   const info = document.createElement('div');
   info.className = 'project-info';
@@ -74,8 +82,43 @@ function createProjectCard(project, index) {
   return card;
 }
 
+projectGrid.addEventListener('click', (event) => {
+  const imageButton = event.target.closest('.project-image-button');
+  if (!imageButton) return;
+
+  const image = imageButton.querySelector('img');
+  imageViewerImage.src = image.src;
+  imageViewerImage.alt = image.alt;
+  imageViewer.showModal();
+});
+
+imageViewer.querySelector('.image-viewer-close').addEventListener('click', () => {
+  imageViewer.close();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || !imageViewer.open) return;
+  event.preventDefault();
+  imageViewer.close();
+});
+
+imageViewer.addEventListener('click', (event) => {
+  if (event.target === imageViewer) imageViewer.close();
+});
+
+imageViewer.addEventListener('close', () => {
+  imageViewerImage.removeAttribute('src');
+  imageViewerImage.alt = '';
+});
+
 async function renderProjects() {
   const projects = await getProjects();
+  const staticProjects = document.querySelectorAll('main > .content-section > .project-grid > .project-card');
+  staticProjects.forEach((card, index) => {
+    const number = String(projects.length + index + 1).padStart(2, '0');
+    card.querySelector('.project-number').textContent = number;
+    card.querySelector('.project-meta span:last-child').textContent = number;
+  });
   if (projects.length === 0) return;
 
   section.hidden = false;

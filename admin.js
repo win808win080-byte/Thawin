@@ -1,4 +1,4 @@
-import { deleteProject, getProjects, getSafeProjectLink, saveProject } from './project-store.js';
+import { deleteProject, getProjects, getSafeProjectLink, saveProject, saveProjectOrder } from './project-store.js';
 
 const form = document.querySelector('#project-form');
 const fileInput = document.querySelector('#project-image');
@@ -22,9 +22,13 @@ function releasePreview() {
   previewUrl = null;
 }
 
-function createAdminProject(project) {
+function createAdminProject(project, index, projects) {
   const card = document.createElement('article');
   card.className = 'admin-project';
+
+  const number = document.createElement('span');
+  number.className = 'admin-project-number';
+  number.textContent = `งานที่ ${String(index + 1).padStart(2, '0')}`;
 
   const image = document.createElement('img');
   image.src = URL.createObjectURL(project.image);
@@ -45,27 +49,25 @@ function createAdminProject(project) {
   description.textContent = project.description;
 
   const projectLink = getSafeProjectLink(project.link);
+  let projectLinkElement = null;
   if (projectLink) {
-    const link = document.createElement('a');
-    link.className = 'text-link project-link';
-    link.href = projectLink;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = 'เปิดลิงก์ผลงาน ↗';
-    details.append(category, title, description, link);
-  } else {
-    details.append(category, title, description);
+    projectLinkElement = document.createElement('a');
+    projectLinkElement.className = 'text-link project-link';
+    projectLinkElement.href = projectLink;
+    projectLinkElement.target = '_blank';
+    projectLinkElement.rel = 'noopener noreferrer';
+    projectLinkElement.textContent = 'เปิดลิงก์ผลงาน ↗';
   }
 
+  let pdfLinkElement = null;
   if (project.pdf instanceof Blob && project.pdf.type === 'application/pdf') {
-    const pdfLink = document.createElement('a');
-    pdfLink.className = 'text-link project-link';
-    pdfLink.href = URL.createObjectURL(project.pdf);
-    pdfLink.target = '_blank';
-    pdfLink.rel = 'noopener noreferrer';
-    pdfLink.textContent = 'เปิดไฟล์ PDF ↗';
-    projectFileUrls.push(pdfLink.href);
-    details.append(pdfLink);
+    pdfLinkElement = document.createElement('a');
+    pdfLinkElement.className = 'text-link project-link';
+    pdfLinkElement.href = URL.createObjectURL(project.pdf);
+    pdfLinkElement.target = '_blank';
+    pdfLinkElement.rel = 'noopener noreferrer';
+    pdfLinkElement.textContent = 'เปิดไฟล์ PDF ↗';
+    projectFileUrls.push(pdfLinkElement.href);
   }
 
   const removeButton = document.createElement('button');
@@ -86,6 +88,40 @@ function createAdminProject(project) {
     }
   });
 
+  const reorderButtons = document.createElement('div');
+  reorderButtons.className = 'admin-project-order';
+
+  const moveButton = (direction, label, symbol, disabled) => {
+    const button = document.createElement('button');
+    button.className = 'button admin-project-move';
+    button.type = 'button';
+    button.textContent = symbol;
+    button.setAttribute('aria-label', label);
+    button.disabled = disabled;
+    button.addEventListener('click', async () => {
+      const newIndex = index + direction;
+      const reorderedProjects = [...projects];
+      [reorderedProjects[index], reorderedProjects[newIndex]] = [reorderedProjects[newIndex], reorderedProjects[index]];
+      button.disabled = true;
+      try {
+        await saveProjectOrder(reorderedProjects);
+        await renderProjects();
+        setStatus(`เปลี่ยนลำดับ “${project.title}” เป็นงานที่ ${String(newIndex + 1).padStart(2, '0')} แล้ว`);
+      } catch (error) {
+        setStatus(`จัดเรียงผลงานไม่สำเร็จ: ${error.message}`, true);
+        await renderProjects();
+      }
+    });
+    return button;
+  };
+
+  reorderButtons.append(
+    moveButton(-1, `เลื่อน ${project.title} ขึ้น`, '↑', index === 0),
+    moveButton(1, `เลื่อน ${project.title} ลง`, '↓', index === projects.length - 1),
+  );
+  details.append(number, category, title, description, reorderButtons);
+  if (projectLinkElement) details.append(projectLinkElement);
+  if (pdfLinkElement) details.append(pdfLinkElement);
   details.append(removeButton);
   card.append(image, details);
   return card;
@@ -103,7 +139,7 @@ async function renderProjects() {
     return;
   }
 
-  projects.forEach((project) => projectList.append(createAdminProject(project)));
+  projects.forEach((project, index) => projectList.append(createAdminProject(project, index, projects)));
 }
 
 fileInput.addEventListener('change', () => {
@@ -172,6 +208,8 @@ form.addEventListener('submit', async (event) => {
   setStatus('กำลังบันทึกผลงานในเบราว์เซอร์...');
 
   try {
+    const existingProjects = await getProjects();
+    await saveProjectOrder(existingProjects);
     await saveProject({
       id: crypto.randomUUID(),
       title,
@@ -181,6 +219,7 @@ form.addEventListener('submit', async (event) => {
       image,
       pdf: pdf ? new Blob([pdf], { type: 'application/pdf' }) : null,
       createdAt: new Date().toISOString(),
+      order: existingProjects.length,
     });
     form.reset();
     preview.hidden = true;
